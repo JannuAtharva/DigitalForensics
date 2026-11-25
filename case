@@ -1,0 +1,67 @@
+# CASE #001: THE MIDNIGHT WIPE
+### Solo forensics lab — chain of custody under fire
+
+## THE BRIEFING
+Yesterday at midnight, Vik — backend engineer on Project Apollo — resigned
+effective immediately. This morning HR noticed three critical files missing
+from his project directory:
+
+  1. keys/payment_gateway.key      production gateway key
+  2. docs/roadmap_2026.md          final roadmap
+  3. db/client_export.sql          client data export
+
+His workstation was still powered on and logged in when you arrived.
+The manager adds a warning: one of the remaining files was probably
+quietly edited before you got here. Trust nothing at face value.
+This lab reproduces everything you have to work with:
+
+  scene/home/vik/          his /home, snapshotted as found (project dir inside)
+  evidence/logs/           auth.log, cron, journal extract (IT exported these)
+  evidence/suspect_usb.img his USB stick, seized and imaged  (READY — ext2, 48 MB, carved self-test passed)
+  findings/                YOUR output — every recovered file goes here
+  SEALS/scene.sha256       the tamper-evident seal of the scene — recompute it yourself
+  .holder.pid              pid of the simulated "sync agent" still running
+
+
+## GROUND RULES
+1. scene/ is EVIDENCE. Never modify it; work on copies only.
+   A seal of the scene ships with the lab — recompute it anytime:
+       (cd scene && sha256sum -c ../SEALS/scene.sha256)
+2. Start a session log first, exactly as taught & note start date & time (UTC):
+3. You must PROVE who did what and when — timestamps, logs, hashes. No guessing.
+
+
+## YOUR OBJECTIVES
+O1  PAPER TRAIL
+    a. findings/manifest_before.txt — sha256 of every file under scene/home/vik,
+    built with RELATIVE paths
+    b. findings/custody_log.txt — a custody entry: who acquired what, when, and
+    the SHA-256 values.
+
+O2  RECOVER docs/roadmap_2026.md     -> findings/roadmap_2026.md
+O3  RECOVER db/client_export.sql     -> findings/client_export.sql
+O4  RECOVER keys/payment_gateway.key -> findings/payment_gateway.key  (hard mode)
+O5  TIMELINE -> findings/timeline.txt
+    When did Vik log in? When did he run the rm? Exact times, each with its
+    SOURCE (which log / which timestamp). UTC or ISO accepted for the rm time.
+
+O6  TAMPER -> findings/architecture_notes.md + findings/tamper_report.txt
+    One file in docs/ is not what it claims to be. Find the contradiction
+    (its mtime vs. the logs), pull the TRUE copy off the USB image, and
+    write a short report citing the log line and the true copy's SHA-256.
+
+
+## TOOLS ON THIS BOX
+  hard mode USB image (mkfs.ext2/debugfs): READY — ext2, 48 MB, carved self-test passed
+  lsof:                                    YES
+  The Sleuth Kit (fls/icat):               NO — install sleuthkit (optional; debugfs fallback works)
+
+## STUCK? (hints, cheapest first)
+  - O2: file managers don't use rm. Where does a GUI deletion go? Check the
+        dot-directories of his home.
+  - O3: read db/sync_agent.log, then look for a process that never let go.
+  - O4: the directory forgot the key; the stick didn't. Ask the image for its
+        deleted inodes.
+  - O5: history lines are stamped in seconds-since-epoch.
+  - O6: pick the file whose mtime contradicts a log entry; the stick holds
+        the untouched version.
